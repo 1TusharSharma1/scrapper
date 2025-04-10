@@ -113,12 +113,13 @@ const scrape = asyncHandler(async (req, res) => {
       }
     }
     
-    // Transform each card to get specific fields
-    const transformedCards = cardsArray
+    // Transform each card to get specific fields needed for analytics and final structure
+    const processedCards = cardsArray
       .filter(card => 
         // Filter out cards without proper structure
         card?.card?.card?.["@type"]?.includes("Dish") && 
-        card?.card?.card?.info
+        card?.card?.card?.info &&
+        card?.card?.card?.restaurant?.info
       )
       .map(card => {
         try {
@@ -126,45 +127,105 @@ const scrape = asyncHandler(async (req, res) => {
           const restaurant = card.card.card.restaurant.info || {};
           
           return {
-            name: info.name || '',
-            category: info.category || '',
-            description: info.description || '',
+            restaurantName: restaurant.name || '',
             imageId: info.imageId || '',
             price: info.price || 0,
-            isVeg: info.isVeg === 1 ? true : false,
-            ratings: {
-              rating: info.ratings?.aggregatedRating?.rating || '',
-              ratingCount: info.ratings?.aggregatedRating?.ratingCount || '',
-              ratingCountV2: info.ratings?.aggregatedRating?.ratingCountV2 || ''
-            },
-            restaurant: {
-              name: restaurant.name || '',
-              id: restaurant.id || '',
-              address: restaurant.address || '',
-              locality: restaurant.locality || '',
-              areaName: restaurant.areaName || '',
-              costForTwo: restaurant.costForTwo || '',
-              costForTwoMessage: restaurant.costForTwoMessage || '',
-              cuisines: restaurant.cuisines || [],
-              avgRating: restaurant.avgRating || '',
-              sla: {
-                deliveryTime: restaurant.sla?.deliveryTime || '',
-                lastMileTravel: restaurant.sla?.lastMileTravel || '',
-                serviceability: restaurant.sla?.serviceability || '',
-                slaString: restaurant.sla?.slaString || '',
-                lastMileTravelString: restaurant.sla?.lastMileTravelString || '',
-                iconType: restaurant.sla?.iconType || ''
-              }
-            }
+            locality: restaurant.locality || '',
+            deliveryTime: restaurant.sla?.deliveryTime || '',
+            avgRatingRestaurant: restaurant.avgRating || '', // Renamed to avoid conflict
+            aggregatedRating: info.ratings?.aggregatedRating?.rating || 0,
+            ratingCount: info.ratings?.aggregatedRating?.ratingCount || 0,
+            ratingCountV2: info.ratings?.aggregatedRating?.ratingCountV2 || 0,
+            lastMileTravel: restaurant.sla?.lastMileTravel || 0
           };
         } catch (error) {
+          console.error("Error processing card:", error); // Log error for debugging
           return null;
         }
       })
-      .filter(Boolean); // Remove null entries
+      .filter(Boolean) // Remove null entries
+      // Filter out cards with zero rating fields
+      .filter(card => 
+        card.aggregatedRating !== 0 && 
+        card.ratingCount !== 0 && 
+        card.ratingCountV2 !== 0
+      );
+
+    if (processedCards.length === 0) {
+      return res.status(200).json(
+        new ApiResponse(200, { data: { analytics: {}, cards: [] } }, "No valid cards found to process")
+      );
+    }
+
+    // Calculate analytics
+    const prices = processedCards.map(card => card.price).filter(price => typeof price === 'number' && price > 0 );
+    
+    // Find min/max based on price
+    let minCard = processedCards[0];
+    let maxCard = processedCards[0];
+    processedCards.forEach(card => {
+      if (card.price < minCard.price) minCard = card;
+      if (card.price > maxCard.price) maxCard = card;
+    });
+    
+    const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+    
+    const priceVSrating = processedCards
+      .map(card => ({
+        price: card.price,
+        rating: parseFloat(card.aggregatedRating) || 0
+      }))
+      .filter(item => !isNaN(item.rating)); // Ensure rating is a valid number
+    
+    const priceVSdistance = processedCards
+      .map(card => ({
+        price: card.price,
+        distance: card.lastMileTravel // Using lastMileTravel as distance
+      }));
+
+    // Sort cards by aggregatedRating (high to low) and take top 5 for the 'cards' section
+    const topRatedCards = processedCards
+      .sort((a, b) => (parseFloat(b.aggregatedRating) || 0) - (parseFloat(a.aggregatedRating) || 0))
+      .slice(0, 5)
+      .map(card => ({
+        name: card.restaurantName,
+        imageId: 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_208,h_208,c_fit/'+card.imageId,
+        price: card.price,
+        ratings: {
+          rating: card.aggregatedRating,
+          ratingCount: card.ratingCount,
+          ratingCountV2: card.ratingCountV2
+        }
+      }));
+
+    // Construct the final response object
+    const response = {
+      data: {
+        analytics: {
+          min: {
+            name: minCard.restaurantName,
+            price: minCard.price,
+            locality: minCard.locality,
+            deliveryTime: minCard.deliveryTime,
+            avgRating: minCard.avgRatingRestaurant // Use the specific restaurant avgRating
+          },
+          max: {
+            name: maxCard.restaurantName,
+            price: maxCard.price,
+            locality: maxCard.locality,
+            deliveryTime: maxCard.deliveryTime,
+            avgRating: maxCard.avgRatingRestaurant // Use the specific restaurant avgRating
+          },
+          avgPrice: avgPrice,
+          priceVSrating: priceVSrating,
+          priceVSdistance: priceVSdistance
+        },
+        cards: topRatedCards 
+      }
+    };
     
     return res.status(200).json(
-      new ApiResponse(200, transformedCards, "API response retrieved successfully")
+      new ApiResponse(200, response, "API response retrieved successfully")
     );
   } catch (error) {
     return res.status(500).json(
