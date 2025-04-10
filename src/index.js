@@ -6,14 +6,12 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import helmet from "helmet";
 import ErrorHandler from "./middlewares/errorHandlerMiddleware.js";
-// routes
 import healthCheckRouter from "./routes/healthCheckerRouter.js";
 import userRouter from "./routes/userRouter.js";
 import menuRouter from "./routes/menuRouter.js";
-
+import scrapeRouter from "./routes/scrapeRouter.js";
 dotenv.config();
 const app = express();
-
 //middlewares
 app.use(morgan("dev"));
 app.use(cors());
@@ -23,8 +21,9 @@ app.use(helmet());
 app.use(cookieParser());
 
 //routes
+app.use("/api/v1", healthCheckRouter);
+app.use("/api/v1/scrape", scrapeRouter);
 
-app.use("/api/v1/", healthCheckRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/menus", menuRouter);
 //error handling middleware
@@ -47,10 +46,11 @@ process.on("uncaughtException", (err) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
 const startServer = async () => {
   try {
     await connectDB(process.env.MONGODB_URL);
-    app.listen(PORT, () => console.log(`server started at port ${PORT}`));
+    app.listen(PORT, () => console.log(`Server started at port ${PORT}`));
   } catch (error) {
     console.log(error.message);
   }
