@@ -8,6 +8,8 @@ import helmet from "helmet";
 import ErrorHandler from "./middlewares/errorHandlerMiddleware.js";
 // routes
 import healthCheckRouter from "./routes/healthCheckerRouter.js";
+import userRouter from "./routes/userRouter.js";
+import menuRouter from "./routes/menuRouter.js";
 
 dotenv.config();
 const app = express();
@@ -23,8 +25,8 @@ app.use(cookieParser());
 //routes
 
 app.use("/api/v1/", healthCheckRouter);
-
-//error handling middleware
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/menus", menuRouter);
 //error handling middleware
 app.use(async (err, req, res, next) => {
   if (!ErrorHandler.isTrustedError(err)) {
