@@ -10,6 +10,7 @@ import healthCheckRouter from "./routes/healthCheckerRouter.js";
 import userRouter from "./routes/userRouter.js";
 import menuRouter from "./routes/menuRouter.js";
 import scrapeRouter from "./routes/scrapeRouter.js";
+import analysisRouter from "./routes/analysisRouter.js";
 dotenv.config();
 const app = express();
 //middlewares
@@ -26,6 +27,7 @@ app.use("/api/v1/scrape", scrapeRouter);
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/menus", menuRouter);
+app.use("/api/v1/analysis", analysisRouter);
 //error handling middleware
 app.use(async (err, req, res, next) => {
   if (!ErrorHandler.isTrustedError(err)) {
@@ -45,7 +47,7 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5010;
 
 const startServer = async () => {
   try {
