@@ -271,7 +271,7 @@ const getMenuForUser = asyncHandler(async (req, res) => {
       errors.array()
     );
   }
-  const { id } = req.params;
+  const id = req.user._id;
   const menus = await Menu.find({ userId: id }).populate("items");
   return res
     .status(HttpStatusCode.OK)
