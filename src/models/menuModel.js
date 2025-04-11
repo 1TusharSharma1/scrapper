@@ -1,5 +1,4 @@
 import { Schema, model } from "mongoose";
-
 const menuSchema = new Schema(
   {
     name: {
@@ -37,9 +36,23 @@ const menuSchema = new Schema(
         ref: "MenuItem",
       },
     ],
+    location:{
+      name: {
+        type: String,
+        required: [true, "Please provide a name for the location"],
+        trim: true,
+      },
+      lat: {
+        type: Number,
+        required: [true, "Please provide a latitude for the location"],
+      },
+      lon: {
+        type: Number,
+        required: [true, "Please provide a longitude for the location"],
+      },
+    },
   },
   { timestamps: true }
 );
-
 const Menu = model("Menu", menuSchema);
 export default Menu;
