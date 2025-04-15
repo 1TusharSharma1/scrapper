@@ -41,7 +41,8 @@ const buildGeminiPrompt = (menu, user, itemAnalyses) => {
   let prompt = `You are a professional data analyst specializing in the Indian food service market. You are generating a **restaurant menu pricing analysis report** for a client based in **${
     menu.location?.name || "Kirti Nagar, Delhi"
   }**, using **data from competitors sourced via Swiggy**. The report should be structured and formatted to be **directly exportable as a polished PDF document**, with clear sections, tables, bolded highlights, and bullet points where necessary.
-
+'Insufficient data is available to assess the value for money offered by Restroworks Cafe's menu. To conduct a
+thorough value for money analysis, the following information is required:  ##DONOT USE THIS TEXT IN THE REPORT or any such text tht says data is insufficient##'
 ## 🔍 Report Content Requirements:
 
 1. **Title Page**  
